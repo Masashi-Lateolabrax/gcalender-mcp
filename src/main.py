@@ -124,7 +124,6 @@ async def create_ai_calendar() -> dict:
 
 @mcp.tool
 async def update_event(
-        calendar_id: str,
         event_id: str,
         summary: str | None = None,
         start_time: str | None = None,
@@ -132,10 +131,9 @@ async def update_event(
         description: str | None = None,
         update_following_instances: bool = False,
 ) -> dict:
-    """Update an existing event in a specified calendar.
+    """Update an existing event in the AI calendar.
 
     Args:
-        calendar_id: Calendar ID containing the event
         event_id: Event ID to update
         summary: New event title/summary (optional)
         start_time: New event start time in ISO 8601 format (e.g., '2025-10-06T09:00:00+09:00') (optional)
@@ -151,9 +149,17 @@ async def update_event(
     token = get_access_token()
     service = get_calendar_service(token.token)
 
+    # Find the "AI" calendar
+    ai_calendar_id = find_ai_calendar(service)
+
+    if not ai_calendar_id:
+        return {
+            "error": "Calendar named 'AI' not found. Please create a calendar named 'AI' in Google Calendar first."
+        }
+
     return update_event_in_calendar(
         service,
-        calendar_id,
+        ai_calendar_id,
         event_id,
         summary,
         start_time,
@@ -165,14 +171,12 @@ async def update_event(
 
 @mcp.tool
 async def delete_event(
-        calendar_id: str,
         event_id: str,
         delete_following_instances: bool = False,
 ) -> dict:
-    """Delete an event from a specified calendar.
+    """Delete an event from the AI calendar.
 
     Args:
-        calendar_id: Calendar ID containing the event
         event_id: Event ID to delete
         delete_following_instances: If True and the event is a recurring event instance,
                                    deletes this instance and all following instances (e.g., weekly meetings from this point forward).
@@ -184,7 +188,15 @@ async def delete_event(
     token = get_access_token()
     service = get_calendar_service(token.token)
 
-    return delete_event_from_calendar(service, calendar_id, event_id, delete_following_instances)
+    # Find the "AI" calendar
+    ai_calendar_id = find_ai_calendar(service)
+
+    if not ai_calendar_id:
+        return {
+            "error": "Calendar named 'AI' not found. Please create a calendar named 'AI' in Google Calendar first."
+        }
+
+    return delete_event_from_calendar(service, ai_calendar_id, event_id, delete_following_instances)
 
 
 if __name__ == "__main__":
