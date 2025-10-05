@@ -125,16 +125,16 @@ async def create_ai_calendar() -> dict:
 async def delete_event(
         calendar_id: str,
         event_id: str,
-        delete_all_instances: bool = False,
+        delete_following_instances: bool = False,
 ) -> dict:
     """Delete an event from a specified calendar.
 
     Args:
         calendar_id: Calendar ID containing the event
         event_id: Event ID to delete
-        delete_all_instances: If True and the event is a recurring event instance,
-                            deletes all instances of the recurring event (e.g., all weekly meetings).
-                            If False (default), only deletes the specified single instance.
+        delete_following_instances: If True and the event is a recurring event instance,
+                                   deletes this instance and all following instances (e.g., weekly meetings from this point forward).
+                                   If False (default), only deletes the specified single instance.
 
     Returns:
         dict: Deletion result with status, event ID, calendar ID, and message
@@ -142,7 +142,7 @@ async def delete_event(
     token = get_access_token()
     service = get_calendar_service(token.token)
 
-    return delete_event_from_calendar(service, calendar_id, event_id, delete_all_instances)
+    return delete_event_from_calendar(service, calendar_id, event_id, delete_following_instances)
 
 
 if __name__ == "__main__":
