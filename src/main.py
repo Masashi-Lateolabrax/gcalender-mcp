@@ -167,5 +167,45 @@ async def create_event(
     return {"id": created_event.get("id")}
 
 
+@mcp.tool
+async def create_ai_calendar() -> dict:
+    """Create a new calendar named 'AI' in Google Calendar.
+
+    Returns:
+        dict: Created calendar details including calendar ID and summary
+    """
+    from google.oauth2.credentials import Credentials
+    from googleapiclient.discovery import build
+    from fastmcp.server.dependencies import get_access_token
+
+    token = get_access_token()
+    credentials = Credentials(token=token.token)
+    service = build("calendar", "v3", credentials=credentials)
+
+    # Check if "AI" calendar already exists
+    calendar_list = service.calendarList().list().execute()
+    for calendar in calendar_list.get("items", []):
+        if calendar.get("summary") == "AI":
+            return {
+                "status": "already_exists",
+                "id": calendar["id"],
+                "summary": calendar["summary"],
+                "message": "Calendar named 'AI' already exists."
+            }
+
+    # Create new calendar
+    calendar_body = {
+        "summary": "AI",
+        "timeZone": "Asia/Tokyo"
+    }
+
+    created_calendar = service.calendars().insert(body=calendar_body).execute()
+
+    return {
+        "status": "created",
+        "id": created_calendar.get("id"),
+    }
+
+
 if __name__ == "__main__":
     mcp.run(transport="streamable-http", host="0.0.0.0", port=8000)
