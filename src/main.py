@@ -53,8 +53,8 @@ async def list_events(
 
     Args:
         max_results: Maximum number of events to return per calendar (default: 10)
-        time_min: Lower bound for event start time (e.g., '2025-10-06T09:00:00+09:00')
-        time_max: Upper bound for event start time (e.g., '2025-10-07T18:00:00+09:00')
+        time_min: Lower bound for event start time (e.g., '2025-10-06T09:00:00+09:00'). If not specified, defaults to 3 days ago.
+        time_max: Upper bound for event start time (e.g., '2025-10-07T18:00:00+09:00'). If not specified, defaults to 3 days from now.
     """
     from google.oauth2.credentials import Credentials
     from googleapiclient.discovery import build
@@ -63,6 +63,12 @@ async def list_events(
     token = get_access_token()
     credentials = Credentials(token=token.token)
     service = build("calendar", "v3", credentials=credentials)
+
+    # Set default time range if not specified (3 days before and after current time)
+    if not time_min:
+        time_min = (datetime.datetime.now(tz=datetime.UTC) - datetime.timedelta(days=3)).isoformat()
+    if not time_max:
+        time_max = (datetime.datetime.now(tz=datetime.UTC) + datetime.timedelta(days=3)).isoformat()
 
     # Get all calendars
     calendar_list = service.calendarList().list().execute()
@@ -76,11 +82,9 @@ async def list_events(
             "maxResults": max_results,
             "singleEvents": True,
             "orderBy": "startTime",
+            "timeMin": time_min,
+            "timeMax": time_max,
         }
-        if time_min:
-            params["timeMin"] = time_min
-        if time_max:
-            params["timeMax"] = time_max
 
         events_response = service.events().list(**params).execute()
 
