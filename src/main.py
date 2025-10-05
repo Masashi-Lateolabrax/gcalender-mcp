@@ -45,16 +45,14 @@ def get_current_time() -> dict:
 
 @mcp.tool
 async def list_events(
-        calendar_id: str = "primary",
         max_results: int = 10,
         time_min: str | None = None,
         time_max: str | None = None,
 ) -> dict:
-    """List events from a calendar.
+    """List events from all calendars.
 
     Args:
-        calendar_id: Calendar identifier (default: 'primary')
-        max_results: Maximum number of events to return (default: 10)
+        max_results: Maximum number of events to return per calendar (default: 10)
         time_min: Lower bound for event start time (e.g., '2025-10-06T09:00:00+09:00')
         time_max: Upper bound for event start time (e.g., '2025-10-07T18:00:00+09:00')
     """
@@ -66,34 +64,40 @@ async def list_events(
     credentials = Credentials(token=token.token)
     service = build("calendar", "v3", credentials=credentials)
 
-    params = {
-        "calendarId": calendar_id,
-        "maxResults": max_results,
-        "singleEvents": True,
-        "orderBy": "startTime",
-    }
-    if time_min:
-        params["timeMin"] = time_min
-    if time_max:
-        params["timeMax"] = time_max
+    # Get all calendars
+    calendar_list = service.calendarList().list().execute()
 
-    events_response = service.events().list(**params).execute()
+    all_events = []
+    for calendar in calendar_list.get("items", []):
+        calendar_id = calendar["id"]
 
-    simplified_events = []
-    for event in events_response.get("items", []):
-        simplified_event = {
-            "summary": event.get("summary"),
-            "start": event.get("start"),
-            "end": event.get("end"),
-            "status": event.get("status"),
+        params = {
+            "calendarId": calendar_id,
+            "maxResults": max_results,
+            "singleEvents": True,
+            "orderBy": "startTime",
         }
-        # Add optional fields if present
-        if "description" in event:
-            simplified_event["description"] = event["description"]
+        if time_min:
+            params["timeMin"] = time_min
+        if time_max:
+            params["timeMax"] = time_max
 
-        simplified_events.append(simplified_event)
+        events_response = service.events().list(**params).execute()
 
-    return {"events": simplified_events}
+        for event in events_response.get("items", []):
+            simplified_event = {
+                "summary": event.get("summary"),
+                "start": event.get("start"),
+                "end": event.get("end"),
+                "status": event.get("status"),
+            }
+            # Add optional fields if present
+            if "description" in event:
+                simplified_event["description"] = event["description"]
+
+            all_events.append(simplified_event)
+
+    return {"events": all_events}
 
 
 if __name__ == "__main__":
