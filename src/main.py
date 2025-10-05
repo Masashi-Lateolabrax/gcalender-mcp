@@ -1,6 +1,9 @@
 import logging
 import os
+import datetime
+
 from dotenv import load_dotenv
+
 from fastmcp import FastMCP
 from fastmcp.server.auth.providers.google import GoogleProvider
 
@@ -26,6 +29,17 @@ async def get_user_id() -> dict:
     return {
         "google_id": token.claims.get("sub"),
         "name": token.claims.get("name"),
+    }
+
+
+@mcp.tool
+def get_current_time() -> dict:
+    """Returns the current time in JST and UTC"""
+    now = datetime.datetime.now(tz=datetime.UTC)
+    jst = now + datetime.timedelta(hours=9)
+    return {
+        "jst": jst.isoformat(),
+        "utc": now.isoformat()
     }
 
 
