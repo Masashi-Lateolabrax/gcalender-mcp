@@ -180,6 +180,102 @@ def create_new_ai_calendar(service) -> dict:
     }
 
 
+def update_event_in_calendar(
+        service,
+        calendar_id: str,
+        event_id: str,
+        summary: str | None = None,
+        start_time: str | None = None,
+        end_time: str | None = None,
+        description: str | None = None,
+        update_following_instances: bool = False,
+) -> dict:
+    """Update an existing event in the specified calendar.
+
+    Args:
+        service: Google Calendar API service instance
+        calendar_id: Calendar ID containing the event
+        event_id: Event ID to update
+        summary: New event title/summary (optional)
+        start_time: New event start time in ISO 8601 format (optional)
+        end_time: New event end time in ISO 8601 format (optional)
+        description: New event description (optional)
+        update_following_instances: If True and the event is a recurring event instance,
+                                    updates this instance and all following instances.
+                                    If False (default), only updates the specified single instance.
+
+    Returns:
+        Updated event details
+    """
+    # Get the current event
+    event = service.events().get(
+        calendarId=calendar_id,
+        eventId=event_id
+    ).execute()
+
+    # If updating following instances of a recurring event
+    if update_following_instances:
+        recurring_event_id = event.get("recurringEventId")
+
+        if recurring_event_id:
+            # Get the parent recurring event
+            parent_event = service.events().get(
+                calendarId=calendar_id,
+                eventId=recurring_event_id
+            ).execute()
+
+            # Update parent event fields
+            if summary is not None:
+                parent_event["summary"] = summary
+            if description is not None:
+                parent_event["description"] = description
+            if start_time is not None:
+                parent_event["start"]["dateTime"] = start_time
+            if end_time is not None:
+                parent_event["end"]["dateTime"] = end_time
+
+            # Update the parent recurring event
+            updated_event = service.events().update(
+                calendarId=calendar_id,
+                eventId=recurring_event_id,
+                body=parent_event
+            ).execute()
+
+            return {
+                "status": "updated_following_instances",
+                "id": event_id,
+                "recurring_event_id": recurring_event_id,
+                "calendar_id": calendar_id,
+                "message": "Updated this instance and all following instances"
+            }
+
+    # Update only the specified event instance
+    if summary is not None:
+        event["summary"] = summary
+    if description is not None:
+        event["description"] = description
+    if start_time is not None:
+        event["start"]["dateTime"] = start_time
+    if end_time is not None:
+        event["end"]["dateTime"] = end_time
+
+    updated_event = service.events().update(
+        calendarId=calendar_id,
+        eventId=event_id,
+        body=event
+    ).execute()
+
+    return {
+        "status": "updated",
+        "id": updated_event.get("id"),
+        "summary": updated_event.get("summary"),
+        "start": updated_event.get("start"),
+        "end": updated_event.get("end"),
+        "calendar_id": calendar_id,
+        "message": "Updated single event instance"
+    }
+
+
 def delete_event_from_calendar(
         service,
         calendar_id: str,

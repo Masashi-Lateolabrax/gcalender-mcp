@@ -14,6 +14,7 @@ from src.calendar_service import (
     create_event_in_calendar,
     check_ai_calendar_exists,
     create_new_ai_calendar,
+    update_event_in_calendar,
     delete_event_from_calendar,
 )
 
@@ -119,6 +120,47 @@ async def create_ai_calendar() -> dict:
 
     # Create new calendar
     return create_new_ai_calendar(service)
+
+
+@mcp.tool
+async def update_event(
+        calendar_id: str,
+        event_id: str,
+        summary: str | None = None,
+        start_time: str | None = None,
+        end_time: str | None = None,
+        description: str | None = None,
+        update_following_instances: bool = False,
+) -> dict:
+    """Update an existing event in a specified calendar.
+
+    Args:
+        calendar_id: Calendar ID containing the event
+        event_id: Event ID to update
+        summary: New event title/summary (optional)
+        start_time: New event start time in ISO 8601 format (e.g., '2025-10-06T09:00:00+09:00') (optional)
+        end_time: New event end time in ISO 8601 format (e.g., '2025-10-06T10:00:00+09:00') (optional)
+        description: New event description (optional)
+        update_following_instances: If True and the event is a recurring event instance,
+                                    updates this instance and all following instances.
+                                    If False (default), only updates the specified single instance.
+
+    Returns:
+        dict: Update result with status, event ID, calendar ID, and message
+    """
+    token = get_access_token()
+    service = get_calendar_service(token.token)
+
+    return update_event_in_calendar(
+        service,
+        calendar_id,
+        event_id,
+        summary,
+        start_time,
+        end_time,
+        description,
+        update_following_instances
+    )
 
 
 @mcp.tool
