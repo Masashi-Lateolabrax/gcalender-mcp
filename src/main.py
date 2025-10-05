@@ -1,4 +1,3 @@
-import logging
 import os
 import datetime
 
@@ -6,6 +5,16 @@ from dotenv import load_dotenv
 
 from fastmcp import FastMCP
 from fastmcp.server.auth.providers.google import GoogleProvider
+from fastmcp.server.dependencies import get_access_token
+
+from src.calendar_service import (
+    get_calendar_service,
+    find_ai_calendar,
+    list_all_events,
+    create_event_in_calendar,
+    check_ai_calendar_exists,
+    create_new_ai_calendar,
+)
 
 load_dotenv()
 
@@ -23,8 +32,6 @@ mcp = FastMCP(name="Google Calendar MCP Server", auth=auth)
 @mcp.tool
 async def get_user_id() -> dict:
     """Returns user ID about the authenticated Google user."""
-    from fastmcp.server.dependencies import get_access_token
-
     token = get_access_token()
     return {
         "google_id": token.claims.get("sub"),
@@ -56,52 +63,10 @@ async def list_events(
         time_min: Lower bound for event start time (e.g., '2025-10-06T09:00:00+09:00'). If not specified, defaults to 3 days ago.
         time_max: Upper bound for event start time (e.g., '2025-10-07T18:00:00+09:00'). If not specified, defaults to 3 days from now.
     """
-    from google.oauth2.credentials import Credentials
-    from googleapiclient.discovery import build
-    from fastmcp.server.dependencies import get_access_token
-
     token = get_access_token()
-    credentials = Credentials(token=token.token)
-    service = build("calendar", "v3", credentials=credentials)
-
-    # Set default time range if not specified (3 days before and after current time)
-    if not time_min:
-        time_min = (datetime.datetime.now(tz=datetime.UTC) - datetime.timedelta(days=3)).isoformat()
-    if not time_max:
-        time_max = (datetime.datetime.now(tz=datetime.UTC) + datetime.timedelta(days=3)).isoformat()
-
-    # Get all calendars
-    calendar_list = service.calendarList().list().execute()
-
-    all_events = []
-    for calendar in calendar_list.get("items", []):
-        calendar_id = calendar["id"]
-
-        params = {
-            "calendarId": calendar_id,
-            "maxResults": max_results,
-            "singleEvents": True,
-            "orderBy": "startTime",
-            "timeMin": time_min,
-            "timeMax": time_max,
-        }
-
-        events_response = service.events().list(**params).execute()
-
-        for event in events_response.get("items", []):
-            simplified_event = {
-                "summary": event.get("summary"),
-                "start": event.get("start"),
-                "end": event.get("end"),
-                "status": event.get("status"),
-            }
-            # Add optional fields if present
-            if "description" in event:
-                simplified_event["description"] = event["description"]
-
-            all_events.append(simplified_event)
-
-    return {"events": all_events}
+    service = get_calendar_service(token.token)
+    events = list_all_events(service, max_results, time_min, time_max)
+    return {"events": events}
 
 
 @mcp.tool
@@ -122,49 +87,18 @@ async def create_event(
     Returns:
         dict: Created event details including event ID, summary, start, end, and HTML link
     """
-    from google.oauth2.credentials import Credentials
-    from googleapiclient.discovery import build
-    from fastmcp.server.dependencies import get_access_token
-
     token = get_access_token()
-    credentials = Credentials(token=token.token)
-    service = build("calendar", "v3", credentials=credentials)
+    service = get_calendar_service(token.token)
 
     # Find the "AI" calendar
-    calendar_list = service.calendarList().list().execute()
-    ai_calendar_id = None
-    for calendar in calendar_list.get("items", []):
-        if calendar.get("summary") == "AI":
-            ai_calendar_id = calendar["id"]
-            break
+    ai_calendar_id = find_ai_calendar(service)
 
     if not ai_calendar_id:
         return {
             "error": "Calendar named 'AI' not found. Please create a calendar named 'AI' in Google Calendar first."
         }
 
-    # Construct event body
-    event_body = {
-        "summary": summary,
-        "start": {
-            "dateTime": start_time,
-        },
-        "end": {
-            "dateTime": end_time,
-        },
-    }
-
-    # Add optional fields
-    if description:
-        event_body["description"] = description
-
-    # Create the event
-    created_event = service.events().insert(
-        calendarId=ai_calendar_id,
-        body=event_body
-    ).execute()
-
-    return {"id": created_event.get("id")}
+    return create_event_in_calendar(service, ai_calendar_id, summary, start_time, end_time, description)
 
 
 @mcp.tool
@@ -174,37 +108,16 @@ async def create_ai_calendar() -> dict:
     Returns:
         dict: Created calendar details including calendar ID and summary
     """
-    from google.oauth2.credentials import Credentials
-    from googleapiclient.discovery import build
-    from fastmcp.server.dependencies import get_access_token
-
     token = get_access_token()
-    credentials = Credentials(token=token.token)
-    service = build("calendar", "v3", credentials=credentials)
+    service = get_calendar_service(token.token)
 
     # Check if "AI" calendar already exists
-    calendar_list = service.calendarList().list().execute()
-    for calendar in calendar_list.get("items", []):
-        if calendar.get("summary") == "AI":
-            return {
-                "status": "already_exists",
-                "id": calendar["id"],
-                "summary": calendar["summary"],
-                "message": "Calendar named 'AI' already exists."
-            }
+    existing = check_ai_calendar_exists(service)
+    if existing:
+        return existing
 
     # Create new calendar
-    calendar_body = {
-        "summary": "AI",
-        "timeZone": "Asia/Tokyo"
-    }
-
-    created_calendar = service.calendars().insert(body=calendar_body).execute()
-
-    return {
-        "status": "created",
-        "id": created_calendar.get("id"),
-    }
+    return create_new_ai_calendar(service)
 
 
 if __name__ == "__main__":
