@@ -17,6 +17,18 @@ mcp = FastMCP(name="Google Calendar MCP Server", auth=auth)
 
 
 @mcp.tool
+async def get_user_id() -> dict:
+    """Returns user ID about the authenticated Google user."""
+    from fastmcp.server.dependencies import get_access_token
+
+    token = get_access_token()
+    return {
+        "google_id": token.claims.get("sub"),
+        "name": token.claims.get("name"),
+    }
+
+
+@mcp.tool
 def add(a: int, b: int) -> int:
     """Add two numbers"""
     return a + b
