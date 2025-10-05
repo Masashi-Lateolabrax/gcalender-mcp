@@ -45,7 +45,7 @@ def get_current_time() -> dict:
 
 @mcp.tool
 async def list_events(
-        max_results: int = 10,
+        max_results: int = 140,
         time_min: str | None = None,
         time_max: str | None = None,
 ) -> dict:
