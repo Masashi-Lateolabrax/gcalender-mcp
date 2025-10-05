@@ -35,10 +35,10 @@ def find_ai_calendar(service) -> str | None:
 
 
 def list_all_events(
-    service,
-    max_results: int = 140,
-    time_min: str | None = None,
-    time_max: str | None = None,
+        service,
+        max_results: int = 140,
+        time_min: str | None = None,
+        time_max: str | None = None,
 ) -> list[dict]:
     """List events from all calendars.
 
@@ -77,6 +77,7 @@ def list_all_events(
 
         for event in events_response.get("items", []):
             simplified_event = {
+                "id": event.get("id"),
                 "summary": event.get("summary"),
                 "start": event.get("start"),
                 "end": event.get("end"),
@@ -92,12 +93,12 @@ def list_all_events(
 
 
 def create_event_in_calendar(
-    service,
-    calendar_id: str,
-    summary: str,
-    start_time: str,
-    end_time: str,
-    description: str | None = None,
+        service,
+        calendar_id: str,
+        summary: str,
+        start_time: str,
+        end_time: str,
+        description: str | None = None,
 ) -> dict:
     """Create a new event in the specified calendar.
 
