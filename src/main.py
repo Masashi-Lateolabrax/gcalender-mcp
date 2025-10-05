@@ -1,35 +1,26 @@
-from pydantic import AnyHttpUrl
+import os
+from dotenv import load_dotenv
+from fastmcp import FastMCP
+from fastmcp.server.auth.providers.google import GoogleProvider
 
-from mcp.server.auth.settings import AuthSettings
-from mcp.server.fastmcp import FastMCP
+load_dotenv()
 
-from fastmcp.server.auth.providers.google import GoogleTokenVerifier
-
-REQUIRED_SCOPES = ["openid"]
-
-mcp = FastMCP(
-    "Weather Service",
-    token_verifier=GoogleTokenVerifier(
-        required_scopes=REQUIRED_SCOPES,
-    ),
-    auth=AuthSettings(
-        issuer_url=AnyHttpUrl("https://accounts.google.com/o/oauth2/auth"),  # Authorization Server URL
-        resource_server_url=AnyHttpUrl("https://perciformes-family.com"),  # This server's URL
-        required_scopes=REQUIRED_SCOPES,
-    ),
+auth = GoogleProvider(
+    client_id=os.getenv("GOOGLE_CLIENT_ID"),
+    client_secret=os.getenv("GOOGLE_CLIENT_SECRET"),
+    base_url=os.getenv("BASE_URL"),
+    redirect_path=os.getenv("REDIRECT_PATH"),
+    required_scopes=os.getenv("REQUIRED_SCOPES").split(","),
 )
 
+mcp = FastMCP(name="Google Calendar MCP Server", auth=auth)
 
-@mcp.tool()
-async def get_weather(city: str = "London") -> dict[str, str]:
-    """Get weather data for a city"""
-    return {
-        "city": city,
-        "temperature": "22",
-        "condition": "Partly cloudy",
-        "humidity": "65%",
-    }
+
+@mcp.tool
+def add(a: int, b: int) -> int:
+    """Add two numbers"""
+    return a + b
 
 
 if __name__ == "__main__":
-    mcp.run(transport="streamable-http")
+    mcp.run()
