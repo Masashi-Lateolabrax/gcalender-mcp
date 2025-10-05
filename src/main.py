@@ -104,5 +104,68 @@ async def list_events(
     return {"events": all_events}
 
 
+@mcp.tool
+async def create_event(
+        summary: str,
+        start_time: str,
+        end_time: str,
+        description: str | None = None,
+) -> dict:
+    """Create a new event in the AI calendar.
+
+    Args:
+        summary: Event title/summary (required)
+        start_time: Event start time in ISO 8601 format (e.g., '2025-10-06T09:00:00+09:00')
+        end_time: Event end time in ISO 8601 format (e.g., '2025-10-06T10:00:00+09:00')
+        description: Event description (optional)
+
+    Returns:
+        dict: Created event details including event ID, summary, start, end, and HTML link
+    """
+    from google.oauth2.credentials import Credentials
+    from googleapiclient.discovery import build
+    from fastmcp.server.dependencies import get_access_token
+
+    token = get_access_token()
+    credentials = Credentials(token=token.token)
+    service = build("calendar", "v3", credentials=credentials)
+
+    # Find the "AI" calendar
+    calendar_list = service.calendarList().list().execute()
+    ai_calendar_id = None
+    for calendar in calendar_list.get("items", []):
+        if calendar.get("summary") == "AI":
+            ai_calendar_id = calendar["id"]
+            break
+
+    if not ai_calendar_id:
+        return {
+            "error": "Calendar named 'AI' not found. Please create a calendar named 'AI' in Google Calendar first."
+        }
+
+    # Construct event body
+    event_body = {
+        "summary": summary,
+        "start": {
+            "dateTime": start_time,
+        },
+        "end": {
+            "dateTime": end_time,
+        },
+    }
+
+    # Add optional fields
+    if description:
+        event_body["description"] = description
+
+    # Create the event
+    created_event = service.events().insert(
+        calendarId=ai_calendar_id,
+        body=event_body
+    ).execute()
+
+    return {"id": created_event.get("id")}
+
+
 if __name__ == "__main__":
     mcp.run(transport="streamable-http", host="0.0.0.0", port=8000)
