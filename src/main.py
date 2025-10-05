@@ -77,11 +77,23 @@ async def list_events(
     if time_max:
         params["timeMax"] = time_max
 
-    events = service.events().list(**params).execute()
+    events_response = service.events().list(**params).execute()
 
-    logging.warning(f"Fetched events: {events}")
+    simplified_events = []
+    for event in events_response.get("items", []):
+        simplified_event = {
+            "summary": event.get("summary"),
+            "start": event.get("start"),
+            "end": event.get("end"),
+            "status": event.get("status"),
+        }
+        # Add optional fields if present
+        if "description" in event:
+            simplified_event["description"] = event["description"]
 
-    return events
+        simplified_events.append(simplified_event)
+
+    return {"events": simplified_events}
 
 
 if __name__ == "__main__":
