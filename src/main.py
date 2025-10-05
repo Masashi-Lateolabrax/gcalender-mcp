@@ -7,7 +7,7 @@ from fastmcp import FastMCP
 from fastmcp.server.auth.providers.google import GoogleProvider
 from fastmcp.server.dependencies import get_access_token
 
-from src.calendar_service import (
+from calendar_service import (
     get_calendar_service,
     find_ai_calendar,
     list_all_events,
