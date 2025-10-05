@@ -178,3 +178,61 @@ def create_new_ai_calendar(service) -> dict:
         "status": "created",
         "id": created_calendar.get("id"),
     }
+
+
+def delete_event_from_calendar(
+        service,
+        calendar_id: str,
+        event_id: str,
+        delete_all_instances: bool = False,
+) -> dict:
+    """Delete an event from the specified calendar.
+
+    Args:
+        service: Google Calendar API service instance
+        calendar_id: Calendar ID containing the event
+        event_id: Event ID to delete
+        delete_all_instances: If True and the event is a recurring event instance,
+                            deletes all instances of the recurring event.
+                            If False, only deletes the specified instance.
+
+    Returns:
+        Deletion result
+    """
+    if delete_all_instances:
+        # First, get the event to check if it's a recurring event instance
+        event = service.events().get(
+            calendarId=calendar_id,
+            eventId=event_id
+        ).execute()
+
+        # If this is an instance of a recurring event, get the recurring event ID
+        recurring_event_id = event.get("recurringEventId")
+
+        if recurring_event_id:
+            # Delete the parent recurring event (which deletes all instances)
+            service.events().delete(
+                calendarId=calendar_id,
+                eventId=recurring_event_id
+            ).execute()
+
+            return {
+                "status": "deleted_all_instances",
+                "event_id": event_id,
+                "recurring_event_id": recurring_event_id,
+                "calendar_id": calendar_id,
+                "message": "Deleted all instances of the recurring event"
+            }
+
+    # Delete only the specified event (or single event if not recurring)
+    service.events().delete(
+        calendarId=calendar_id,
+        eventId=event_id
+    ).execute()
+
+    return {
+        "status": "deleted",
+        "event_id": event_id,
+        "calendar_id": calendar_id,
+        "message": "Deleted single event instance"
+    }

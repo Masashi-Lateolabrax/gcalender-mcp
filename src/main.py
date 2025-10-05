@@ -14,6 +14,7 @@ from src.calendar_service import (
     create_event_in_calendar,
     check_ai_calendar_exists,
     create_new_ai_calendar,
+    delete_event_from_calendar,
 )
 
 load_dotenv()
@@ -118,6 +119,30 @@ async def create_ai_calendar() -> dict:
 
     # Create new calendar
     return create_new_ai_calendar(service)
+
+
+@mcp.tool
+async def delete_event(
+        calendar_id: str,
+        event_id: str,
+        delete_all_instances: bool = False,
+) -> dict:
+    """Delete an event from a specified calendar.
+
+    Args:
+        calendar_id: Calendar ID containing the event
+        event_id: Event ID to delete
+        delete_all_instances: If True and the event is a recurring event instance,
+                            deletes all instances of the recurring event (e.g., all weekly meetings).
+                            If False (default), only deletes the specified single instance.
+
+    Returns:
+        dict: Deletion result with status, event ID, calendar ID, and message
+    """
+    token = get_access_token()
+    service = get_calendar_service(token.token)
+
+    return delete_event_from_calendar(service, calendar_id, event_id, delete_all_instances)
 
 
 if __name__ == "__main__":
