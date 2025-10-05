@@ -184,7 +184,7 @@ def delete_event_from_calendar(
         service,
         calendar_id: str,
         event_id: str,
-        delete_all_instances: bool = False,
+        delete_following_instances: bool = False,
 ) -> dict:
     """Delete an event from the specified calendar.
 
@@ -192,14 +192,14 @@ def delete_event_from_calendar(
         service: Google Calendar API service instance
         calendar_id: Calendar ID containing the event
         event_id: Event ID to delete
-        delete_all_instances: If True and the event is a recurring event instance,
-                            deletes all instances of the recurring event.
-                            If False, only deletes the specified instance.
+        delete_following_instances: If True and the event is a recurring event instance,
+                                   deletes this instance and all following instances.
+                                   If False, only deletes the specified single instance.
 
     Returns:
         Deletion result
     """
-    if delete_all_instances:
+    if delete_following_instances:
         # First, get the event to check if it's a recurring event instance
         event = service.events().get(
             calendarId=calendar_id,
@@ -210,19 +210,63 @@ def delete_event_from_calendar(
         recurring_event_id = event.get("recurringEventId")
 
         if recurring_event_id:
-            # Delete the parent recurring event (which deletes all instances)
-            service.events().delete(
+            # Get the parent recurring event
+            parent_event = service.events().get(
                 calendarId=calendar_id,
                 eventId=recurring_event_id
             ).execute()
 
-            return {
-                "status": "deleted_all_instances",
-                "event_id": event_id,
-                "recurring_event_id": recurring_event_id,
-                "calendar_id": calendar_id,
-                "message": "Deleted all instances of the recurring event"
-            }
+            # Get the start time of the instance being deleted
+            instance_start = event.get("start", {}).get("dateTime") or event.get("start", {}).get("date")
+
+            # Update the parent event's recurrence rule to end before this instance
+            # by setting UNTIL parameter
+            if instance_start:
+                # Parse the start time and subtract one day to set UNTIL
+                if "T" in instance_start:
+                    # DateTime format
+                    dt = datetime.datetime.fromisoformat(instance_start.replace("Z", "+00:00"))
+                else:
+                    # Date only format
+                    dt = datetime.datetime.fromisoformat(instance_start)
+
+                # Format UNTIL date (YYYYMMDD format for all-day, or YYYYMMDDTHHMMSSZ for datetime)
+                if "T" in instance_start:
+                    until_date = dt.strftime("%Y%m%dT%H%M%SZ")
+                else:
+                    until_date = dt.strftime("%Y%m%d")
+
+                # Update recurrence rules
+                recurrence = parent_event.get("recurrence", [])
+                updated_recurrence = []
+
+                for rule in recurrence:
+                    if rule.startswith("RRULE:"):
+                        # Remove existing UNTIL or COUNT if present
+                        parts = rule.split(";")
+                        filtered_parts = [p for p in parts if not p.startswith("UNTIL=") and not p.startswith("COUNT=")]
+                        # Add new UNTIL
+                        updated_rule = ";".join(filtered_parts) + f";UNTIL={until_date}"
+                        updated_recurrence.append(updated_rule)
+                    else:
+                        updated_recurrence.append(rule)
+
+                # Update the parent event
+                parent_event["recurrence"] = updated_recurrence
+                service.events().update(
+                    calendarId=calendar_id,
+                    eventId=recurring_event_id,
+                    body=parent_event
+                ).execute()
+
+                return {
+                    "status": "deleted_following_instances",
+                    "event_id": event_id,
+                    "recurring_event_id": recurring_event_id,
+                    "calendar_id": calendar_id,
+                    "until_date": until_date,
+                    "message": f"Deleted this instance and all following instances (set UNTIL to {until_date})"
+                }
 
     # Delete only the specified event (or single event if not recurring)
     service.events().delete(
