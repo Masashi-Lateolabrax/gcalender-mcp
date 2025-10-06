@@ -248,5 +248,23 @@ def list_notes() -> dict:
     notes = [f for f in os.listdir(notes_dir) if os.path.isfile(os.path.join(notes_dir, f))]
     return {"notes": notes}
 
+
+@mcp.tool
+def read_note(title: str) -> dict:
+    """Read a note.
+
+    Args:
+        title (str): Note title to read
+
+    Returns:
+        dict: Note content or error
+    """
+    note_path = os.path.join("./notes", title)
+    if not os.path.exists(note_path):
+        return {"error": "Note not found."}
+    with open(note_path, "r") as f:
+        content = json.load(f)
+    return content
+
 if __name__ == "__main__":
     mcp.run(transport="streamable-http", host="0.0.0.0", port=8000)
