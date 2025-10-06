@@ -1,6 +1,5 @@
 import os
 import datetime
-import json
 
 from dotenv import load_dotenv
 
@@ -17,6 +16,15 @@ from calendar_service import (
     create_new_ai_calendar,
     update_event_in_calendar,
     delete_event_from_calendar,
+)
+from note_service import (
+    create_note_file,
+    delete_note_file,
+    list_all_notes,
+    read_note_content,
+    edit_note_value,
+    insert_key_path,
+    delete_key_path,
 )
 
 load_dotenv()
@@ -210,12 +218,7 @@ def create_note(title: str) -> dict:
     Returns:
         dict: Success message or error
     """
-    os.makedirs("./notes", exist_ok=True)
-    if os.path.exists(os.path.join("./notes", title)):
-        return {"error": "Note with this title already exists."}
-    with open(os.path.join("./notes", title), "w") as f:
-        json.dump({}, f)
-    return {"message": "Note created successfully."}
+    return create_note_file(title)
 
 
 @mcp.tool
@@ -228,11 +231,7 @@ def delete_note(title: str) -> dict:
     Returns:
         dict: Deletion result with message or error
     """
-    note_path = os.path.join("./notes", title)
-    if not os.path.exists(note_path):
-        return {"error": "Note not found."}
-    os.remove(note_path)
-    return {"message": "Note deleted successfully."}
+    return delete_note_file(title)
 
 
 @mcp.tool
@@ -242,11 +241,7 @@ def list_notes() -> dict:
     Returns:
         dict: Dictionary with notes list or error
     """
-    notes_dir = "./notes"
-    if not os.path.exists(notes_dir):
-        return {"notes": []}
-    notes = [f for f in os.listdir(notes_dir) if os.path.isfile(os.path.join(notes_dir, f))]
-    return {"notes": notes}
+    return list_all_notes()
 
 
 @mcp.tool
@@ -259,12 +254,7 @@ def read_note(title: str) -> dict:
     Returns:
         dict: Note content or error
     """
-    note_path = os.path.join("./notes", title)
-    if not os.path.exists(note_path):
-        return {"error": "Note not found."}
-    with open(note_path, "r") as f:
-        content = json.load(f)
-    return content
+    return read_note_content(title)
 
 
 @mcp.tool
@@ -284,26 +274,7 @@ def edit_note(title: str, key: list[str], value: str) -> dict:
         edit_note("meeting_notes", ["project", "status"], "in progress")
         # Result: {"project": {"status": "in progress"}}
     """
-    note_path = os.path.join("./notes", title)
-    if not os.path.exists(note_path):
-        return {"error": "Note not found."}
-
-    with open(note_path, "r") as f:
-        content = json.load(f)
-
-    # Navigate to the target location and set the value
-    current = content
-    for k in key[:-1]:
-        if k not in current:
-            current[k] = {}
-        current = current[k]
-
-    current[key[-1]] = value
-
-    with open(note_path, "w") as f:
-        json.dump(content, f, indent=2)
-
-    return {"message": "Note updated successfully."}
+    return edit_note_value(title, key, value)
 
 
 @mcp.tool
@@ -329,27 +300,7 @@ def insert_key_in_note(title: str, key: list[str]) -> dict:
         insert_key_in_note("mynote", ["a", "b"])
         # Result: {"a": {"b": "value"}}
     """
-    note_path = os.path.join("./notes", title)
-    if not os.path.exists(note_path):
-        return {"error": "Note not found."}
-
-    with open(note_path, "r") as f:
-        content = json.load(f)
-
-    # Navigate to the target location, creating nested structure as needed
-    current = content
-    for i in range(len(key)):
-        if key[i] not in current:
-            current[key[i]] = {}
-        elif not isinstance(current[key[i]], dict) and i + 1 < len(key):
-            # Convert existing non-dict value to dict, preserving value under next key
-            value = current[key[i]]
-            current[key[i]] = {key[i + 1]: value}
-
-    with open(note_path, "w") as f:
-        json.dump(content, f, indent=2)
-
-    return {"message": "Key inserted successfully."}
+    return insert_key_path(title, key)
 
 
 @mcp.tool
@@ -368,30 +319,7 @@ def delete_key_in_note(title: str, key: list[str]) -> dict:
         delete_key_in_note("meeting_notes", ["project", "notes"])
         # Result: {"project": {"status": "done"}}
     """
-    note_path = os.path.join("./notes", title)
-    if not os.path.exists(note_path):
-        return {"error": "Note not found."}
-
-    with open(note_path, "r") as f:
-        content = json.load(f)
-
-    # Navigate to the parent of the target key
-    current = content
-    for k in key[:-1]:
-        if k not in current:
-            return {"error": f"Path not found: {k}"}
-        current = current[k]
-
-    # Delete the key
-    if key[-1] not in current:
-        return {"error": f"Key '{key[-1]}' not found."}
-
-    del current[key[-1]]
-
-    with open(note_path, "w") as f:
-        json.dump(content, f, indent=2)
-
-    return {"message": "Key deleted successfully."}
+    return delete_key_path(title, key)
 
 
 if __name__ == "__main__":
