@@ -37,7 +37,7 @@ auth = GoogleProvider(
     required_scopes=os.getenv("REQUIRED_SCOPES").split(","),
 )
 
-mcp = FastMCP(name="Google Calendar MCP Server", auth=auth)
+mcp = FastMCP(name="Google Calendar MCP Server", auth=auth, stateless_http=True)
 
 
 @mcp.tool
