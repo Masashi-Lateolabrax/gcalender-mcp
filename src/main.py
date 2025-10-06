@@ -17,15 +17,6 @@ from calendar_service import (
     update_event_in_calendar,
     delete_event_from_calendar,
 )
-from note_service import (
-    create_note_file,
-    delete_note_file,
-    list_all_notes,
-    read_note_content,
-    edit_note_value,
-    insert_key_path,
-    delete_key_path,
-)
 
 load_dotenv()
 
@@ -206,120 +197,6 @@ async def delete_event(
         }
 
     return delete_event_from_calendar(service, ai_calendar_id, event_id, delete_following_instances)
-
-
-@mcp.tool
-def create_note(title: str) -> dict:
-    """Create a new note with the given title.
-
-    Args:
-        title (str): Note title (used as filename)
-
-    Returns:
-        dict: Success message or error
-    """
-    return create_note_file(title)
-
-
-@mcp.tool
-def delete_note(title: str) -> dict:
-    """Delete a note.
-
-    Args:
-        title (str): Note title to delete
-
-    Returns:
-        dict: Deletion result with message or error
-    """
-    return delete_note_file(title)
-
-
-@mcp.tool
-def list_notes() -> dict:
-    """List all notes.
-
-    Returns:
-        dict: Dictionary with notes list or error
-    """
-    return list_all_notes()
-
-
-@mcp.tool
-def read_note(title: str) -> dict:
-    """Read a note.
-
-    Args:
-        title (str): Note title to read
-
-    Returns:
-        dict: Note content or error
-    """
-    return read_note_content(title)
-
-
-@mcp.tool
-def edit_note(title: str, key: list[str], value: str) -> dict:
-    """Edit a value in a note by key path.
-
-    Args:
-        title (str): Note title to edit
-        key (list[str]): List of keys representing the path to the value (e.g., ["section1", "subsection", "field"])
-        value (str): New value to set
-
-    Returns:
-        dict: Success message or error
-
-    Example:
-        # Note content: {"project": {"status": "planning"}}
-        edit_note("meeting_notes", ["project", "status"], "in progress")
-        # Result: {"project": {"status": "in progress"}}
-    """
-    return edit_note_value(title, key, value)
-
-
-@mcp.tool
-def insert_key_in_note(title: str, key: list[str]) -> dict:
-    """Insert a key path structure in a note, creating nested dictionaries along the path.
-
-    Args:
-        title (str): Note title to edit
-        key (list[str]): List of keys representing the path to create (e.g., ["section1", "subsection", "field"])
-                        Creates all keys as dictionaries. If a non-dict value exists in the path,
-                        it will be converted to a dict, moving the existing value under the next key
-                        in the path to preserve it.
-
-    Returns:
-        dict: Success message or error
-
-    Example:
-        # Starting with empty note: {}
-        insert_key_in_note("mynote", ["a", "b", "c"])
-        # Result: {"a": {"b": {"c": {}}}}
-
-        # With existing non-dict value: {"a": "value"}
-        insert_key_in_note("mynote", ["a", "b"])
-        # Result: {"a": {"b": "value"}}
-    """
-    return insert_key_path(title, key)
-
-
-@mcp.tool
-def delete_key_in_note(title: str, key: list[str]) -> dict:
-    """Delete a key from a note.
-
-    Args:
-        title (str): Note title to edit
-        key (list[str]): List of keys representing the path to delete (e.g., ["section1", "field_to_delete"])
-
-    Returns:
-        dict: Success message or error
-
-    Example:
-        # Note content: {"project": {"status": "done", "notes": "completed"}}
-        delete_key_in_note("meeting_notes", ["project", "notes"])
-        # Result: {"project": {"status": "done"}}
-    """
-    return delete_key_path(title, key)
 
 
 if __name__ == "__main__":
