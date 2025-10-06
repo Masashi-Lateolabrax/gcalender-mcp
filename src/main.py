@@ -305,5 +305,51 @@ def edit_note(title: str, key: list[str], value: str) -> dict:
 
     return {"message": "Note updated successfully."}
 
+
+@mcp.tool
+def insert_key_in_note(title: str, key: list[str]) -> dict:
+    """Insert a key path structure in a note, creating nested dictionaries along the path.
+
+    Args:
+        title (str): Note title to edit
+        key (list[str]): List of keys representing the path to create (e.g., ["section1", "subsection", "field"])
+                        Creates all keys as dictionaries. If a non-dict value exists in the path,
+                        it will be converted to a dict, moving the existing value under the next key
+                        in the path to preserve it.
+
+    Returns:
+        dict: Success message or error
+
+    Example:
+        # Starting with empty note: {}
+        insert_key_in_note("mynote", ["a", "b", "c"])
+        # Result: {"a": {"b": {"c": {}}}}
+
+        # With existing non-dict value: {"a": "value"}
+        insert_key_in_note("mynote", ["a", "b"])
+        # Result: {"a": {"b": "value"}}
+    """
+    note_path = os.path.join("./notes", title)
+    if not os.path.exists(note_path):
+        return {"error": "Note not found."}
+
+    with open(note_path, "r") as f:
+        content = json.load(f)
+
+    # Navigate to the target location, creating nested structure as needed
+    current = content
+    for i in range(len(key)):
+        if key[i] not in current:
+            current[key[i]] = {}
+        elif not isinstance(current[key[i]], dict) and i + 1 < len(key):
+            # Convert existing non-dict value to dict, preserving value under next key
+            value = current[key[i]]
+            current[key[i]] = {key[i + 1]: value}
+
+    with open(note_path, "w") as f:
+        json.dump(content, f, indent=2)
+
+    return {"message": "Key inserted successfully."}
+
 if __name__ == "__main__":
     mcp.run(transport="streamable-http", host="0.0.0.0", port=8000)
