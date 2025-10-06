@@ -202,6 +202,14 @@ async def delete_event(
 
 @mcp.tool
 def create_note(title: str) -> dict:
+    """Create a new note with the given title.
+
+    Args:
+        title (str): Note title (used as filename)
+
+    Returns:
+        dict: Success message or error
+    """
     os.makedirs("./notes", exist_ok=True)
     if os.path.exists(os.path.join("./notes", title)):
         return {"error": "Note with this title already exists."}
