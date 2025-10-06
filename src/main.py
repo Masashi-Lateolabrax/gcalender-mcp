@@ -234,5 +234,19 @@ def delete_note(title: str) -> dict:
     os.remove(note_path)
     return {"message": "Note deleted successfully."}
 
+
+@mcp.tool
+def list_notes() -> dict:
+    """List all notes.
+
+    Returns:
+        dict: Dictionary with notes list or error
+    """
+    notes_dir = "./notes"
+    if not os.path.exists(notes_dir):
+        return {"notes": []}
+    notes = [f for f in os.listdir(notes_dir) if os.path.isfile(os.path.join(notes_dir, f))]
+    return {"notes": notes}
+
 if __name__ == "__main__":
     mcp.run(transport="streamable-http", host="0.0.0.0", port=8000)
