@@ -217,5 +217,22 @@ def create_note(title: str) -> dict:
         json.dump({}, f)
     return {"message": "Note created successfully."}
 
+
+@mcp.tool
+def delete_note(title: str) -> dict:
+    """Delete a note.
+
+    Args:
+        title (str): Note title to delete
+
+    Returns:
+        dict: Deletion result with message or error
+    """
+    note_path = os.path.join("./notes", title)
+    if not os.path.exists(note_path):
+        return {"error": "Note not found."}
+    os.remove(note_path)
+    return {"message": "Note deleted successfully."}
+
 if __name__ == "__main__":
     mcp.run(transport="streamable-http", host="0.0.0.0", port=8000)
