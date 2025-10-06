@@ -323,4 +323,10 @@ def delete_key_in_note(title: str, key: list[str]) -> dict:
 
 
 if __name__ == "__main__":
-    mcp.run(transport="sse", host="0.0.0.0", port=8000)
+    import sys
+
+    if "--http" in sys.argv:
+        mcp.run(transport="streamable-http", host="0.0.0.0", port=8000)
+
+    else:
+        mcp.run(transport="sse", host="0.0.0.0", port=8000)
