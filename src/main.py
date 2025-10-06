@@ -266,5 +266,44 @@ def read_note(title: str) -> dict:
         content = json.load(f)
     return content
 
+
+@mcp.tool
+def edit_note(title: str, key: list[str], value: str) -> dict:
+    """Edit a value in a note by key path.
+
+    Args:
+        title (str): Note title to edit
+        key (list[str]): List of keys representing the path to the value (e.g., ["section1", "subsection", "field"])
+        value (str): New value to set
+
+    Returns:
+        dict: Success message or error
+
+    Example:
+        # Note content: {"project": {"status": "planning"}}
+        edit_note("meeting_notes", ["project", "status"], "in progress")
+        # Result: {"project": {"status": "in progress"}}
+    """
+    note_path = os.path.join("./notes", title)
+    if not os.path.exists(note_path):
+        return {"error": "Note not found."}
+
+    with open(note_path, "r") as f:
+        content = json.load(f)
+
+    # Navigate to the target location and set the value
+    current = content
+    for k in key[:-1]:
+        if k not in current:
+            current[k] = {}
+        current = current[k]
+
+    current[key[-1]] = value
+
+    with open(note_path, "w") as f:
+        json.dump(content, f, indent=2)
+
+    return {"message": "Note updated successfully."}
+
 if __name__ == "__main__":
     mcp.run(transport="streamable-http", host="0.0.0.0", port=8000)
