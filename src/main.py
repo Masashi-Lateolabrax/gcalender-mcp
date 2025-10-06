@@ -1,5 +1,6 @@
 import os
 import datetime
+import json
 
 from dotenv import load_dotenv
 
@@ -198,6 +199,15 @@ async def delete_event(
 
     return delete_event_from_calendar(service, ai_calendar_id, event_id, delete_following_instances)
 
+
+@mcp.tool
+def create_note(title: str) -> dict:
+    os.makedirs("./notes", exist_ok=True)
+    if os.path.exists(os.path.join("./notes", title)):
+        return {"error": "Note with this title already exists."}
+    with open(os.path.join("./notes", title), "w") as f:
+        json.dump({}, f)
+    return {"message": "Note created successfully."}
 
 if __name__ == "__main__":
     mcp.run(transport="streamable-http", host="0.0.0.0", port=8000)
