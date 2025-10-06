@@ -351,5 +351,48 @@ def insert_key_in_note(title: str, key: list[str]) -> dict:
 
     return {"message": "Key inserted successfully."}
 
+
+@mcp.tool
+def delete_key_in_note(title: str, key: list[str]) -> dict:
+    """Delete a key from a note.
+
+    Args:
+        title (str): Note title to edit
+        key (list[str]): List of keys representing the path to delete (e.g., ["section1", "field_to_delete"])
+
+    Returns:
+        dict: Success message or error
+
+    Example:
+        # Note content: {"project": {"status": "done", "notes": "completed"}}
+        delete_key_in_note("meeting_notes", ["project", "notes"])
+        # Result: {"project": {"status": "done"}}
+    """
+    note_path = os.path.join("./notes", title)
+    if not os.path.exists(note_path):
+        return {"error": "Note not found."}
+
+    with open(note_path, "r") as f:
+        content = json.load(f)
+
+    # Navigate to the parent of the target key
+    current = content
+    for k in key[:-1]:
+        if k not in current:
+            return {"error": f"Path not found: {k}"}
+        current = current[k]
+
+    # Delete the key
+    if key[-1] not in current:
+        return {"error": f"Key '{key[-1]}' not found."}
+
+    del current[key[-1]]
+
+    with open(note_path, "w") as f:
+        json.dump(content, f, indent=2)
+
+    return {"message": "Key deleted successfully."}
+
+
 if __name__ == "__main__":
     mcp.run(transport="streamable-http", host="0.0.0.0", port=8000)
