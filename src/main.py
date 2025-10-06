@@ -37,7 +37,7 @@ auth = GoogleProvider(
     required_scopes=os.getenv("REQUIRED_SCOPES").split(","),
 )
 
-mcp = FastMCP(name="Google Calendar MCP Server", auth=auth, stateless_http=True)
+mcp = FastMCP(name="Google Calendar MCP Server", auth=auth)
 
 
 @mcp.tool
@@ -323,4 +323,4 @@ def delete_key_in_note(title: str, key: list[str]) -> dict:
 
 
 if __name__ == "__main__":
-    mcp.run(transport="streamable-http", host="0.0.0.0", port=8000)
+    mcp.run(transport="sse", host="0.0.0.0", port=8000)
